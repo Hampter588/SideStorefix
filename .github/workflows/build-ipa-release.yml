@@ -31,7 +31,24 @@ jobs:
       - name: Build and package IPA
         run: |
           set -euo pipefail
+
           make -B build 2>&1 | xcbeautify --renderer github-actions
+
+          # SideStore's build creates SideBackup.ipa separately, but the
+          # signing/package stage expects it to be embedded in SideStore.app.
+          test -s build/SideBackup.ipa
+
+          APP_PATH="$(find build -type d -name 'SideStore.app' -print -quit)"
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: Could not find SideStore.app under build/"
+            find build -maxdepth 5 -print
+            exit 1
+          fi
+
+          echo "Found app bundle: $APP_PATH"
+          cp build/SideBackup.ipa "$APP_PATH/SideBackup.ipa"
+          test -s "$APP_PATH/SideBackup.ipa"
+
           make fakesign
           make ipa
 
