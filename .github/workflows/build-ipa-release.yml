@@ -34,22 +34,23 @@ jobs:
 
           make -B build 2>&1 | xcbeautify --renderer github-actions
 
-          # SideStore's build creates SideBackup.ipa separately, but the
-          # signing/package stage expects it to be embedded in SideStore.app.
-          test -s build/SideBackup.ipa
+          SIDESTORE_APP="SideStore.xcarchive/Products/Applications/SideStore.app"
+          SIDEBACKUP_IPA="build/SideBackup.ipa"
 
-          APP_PATH="$(find build -type d -name 'SideStore.app' -print -quit)"
-          if [ -z "$APP_PATH" ]; then
-            echo "ERROR: Could not find SideStore.app under build/"
-            find build -maxdepth 5 -print
-            exit 1
-          fi
+          echo "Checking build outputs..."
 
-          echo "Found app bundle: $APP_PATH"
-          cp build/SideBackup.ipa "$APP_PATH/SideBackup.ipa"
-          test -s "$APP_PATH/SideBackup.ipa"
+          test -d "$SIDESTORE_APP"
+          test -s "$SIDEBACKUP_IPA"
 
+          echo "Copying SideBackup.ipa into SideStore.app..."
+          cp "$SIDEBACKUP_IPA" "$SIDESTORE_APP/SideBackup.ipa"
+
+          test -s "$SIDESTORE_APP/SideBackup.ipa"
+
+          echo "Fake-signing..."
           make fakesign
+
+          echo "Packaging final SideStore IPA..."
           make ipa
 
       - name: Verify IPA
